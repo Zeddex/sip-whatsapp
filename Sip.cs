@@ -25,6 +25,8 @@ namespace SipWA
         public int Expire { get; set; }
         public WhatsAppApp WhatsAppApp { get; set; }
         public bool IsCallCancelled { get; set; }
+        public List<AudioCodecsEnum> Codecs { get; set; }
+
 
         private readonly WindowsAudioEndPoint _audioEndPoint;
         private readonly SIPTransport _sipTransport;
@@ -49,9 +51,11 @@ namespace SipWA
             _sipTransport.EnableTraceLogs();
         }
 
-        public void Init(WhatsAppApp wa)
+        public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs)
         {
             WhatsAppApp = wa;
+
+            Codecs = codecs;
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
 
@@ -295,21 +299,15 @@ namespace SipWA
 
         private VoIPMediaSession CreateRtpSession(SIPUserAgent ua, string dst)
         {
-            var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
+            _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
-            // Configure the codecs and formats supported by the audio endpoint
-            _audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
-
-            // Create a new RTP session with the Windows audio endpoint as both the source and sink
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
             {
                 AudioSource = _audioEndPoint,
                 AudioSink = _audioEndPoint
             });
-
             rtpAudioSession.AcceptRtpFromAny = true;
 
-            // Existing event handlers...
             rtpAudioSession.OnRtpPacketReceived += (ep, type, rtp) =>
             {
                 // Handle incoming RTP packets
@@ -338,6 +336,7 @@ namespace SipWA
 
             var audioExtrasSource = new AudioExtrasSource(new AudioEncoder(), new AudioSourceOptions { AudioSource = audioSource });
             audioExtrasSource.RestrictFormats(formats => codecs.Contains(formats.Codec));
+
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints { AudioSource = audioExtrasSource });
             rtpAudioSession.AcceptRtpFromAny = true;
 

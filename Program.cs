@@ -7,6 +7,10 @@ namespace SipWA
     {
         static void Main()
         {
+            var menu = new Menu();
+            menu.StartInfo();
+            var codecs = menu.CodecsList();
+
             var waApp = new WhatsAppApp();
             waApp.Init();
 
@@ -22,7 +26,7 @@ namespace SipWA
             int sipPort = 5060;
             int sipExpire = 600;
             var sip = new Sip(sipUsername, sipPassword, sipDomain, sipPort, sipExpire);
-            sip.Init(waApp);
+            sip.Init(waApp, codecs);
 
             Console.ReadKey();
 
