@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 using SIPSorcery.SIP;
+using SIPSorceryMedia.Abstractions;
 
 namespace SipWA
 {
@@ -75,5 +76,25 @@ namespace SipWA
         {
             return DateTime.Now.TimeOfDay;
         }
+
+        public static List<T> EnumParse<T>(List<string> stringList) where T : struct, Enum
+        {
+            List<T> enumList = new ();
+
+            foreach (string value in stringList)
+            {
+                if (Enum.TryParse<T>(value, out T enumValue))
+                {
+                    enumList.Add(enumValue);
+                }
+                else
+                {
+                    Console.WriteLine($"'{value}' is not a valid enum value.");
+                }
+            }
+
+            return enumList;
+        }
+
     }
 }

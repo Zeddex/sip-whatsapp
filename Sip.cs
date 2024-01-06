@@ -25,6 +25,8 @@ namespace SipWA
         public int Expire { get; set; }
         public WhatsAppApp WhatsAppApp { get; set; }
         public bool IsCallCancelled { get; set; }
+        public List<AudioCodecsEnum> Codecs { get; set; }
+
 
         private readonly WindowsAudioEndPoint _audioEndPoint;
         private readonly SIPTransport _sipTransport;
@@ -49,9 +51,11 @@ namespace SipWA
             _sipTransport.EnableTraceLogs();
         }
 
-        public void Init(WhatsAppApp wa)
+        public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs)
         {
             WhatsAppApp = wa;
+
+            Codecs = codecs;
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
 
@@ -295,10 +299,8 @@ namespace SipWA
 
         private VoIPMediaSession CreateRtpSession(SIPUserAgent ua, string dst)
         {
-            var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
-
             // Configure the codecs and formats supported by the audio endpoint
-            _audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
+            _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
             // Create a new RTP session with the Windows audio endpoint as both the source and sink
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
