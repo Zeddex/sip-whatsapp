@@ -26,6 +26,7 @@ namespace SipWA
                 new MultiSelectionPrompt<string>()
                     .Title("Select codecs:")
                     .PageSize(20)
+                    .Required()
                     .InstructionsText(
                         "[grey]Press [blue]<space>[/] to toggle a codec, " +
                         "[green]<enter>[/] to accept[/]")

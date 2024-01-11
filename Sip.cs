@@ -63,6 +63,16 @@ namespace SipWA
             userAgent.Start();
         }
 
+        public void Init(WhatsAppApp wa)
+        {
+            WhatsAppApp = wa;
+
+            _sipTransport.SIPTransportRequestReceived += OnRequest;
+
+            var userAgent = StartRegistrations(_sipTransport, User, Password, Domain, Expire);
+            userAgent.Start();
+        }
+
         private SIPRegistrationUserAgent StartRegistrations(SIPTransport sipTransport, string username, string password, string domain, int expiry)
         {
             var regUserAgent = new SIPRegistrationUserAgent(sipTransport, username, password, domain, expiry);
@@ -300,12 +310,15 @@ namespace SipWA
         private VoIPMediaSession CreateRtpSession(SIPUserAgent ua, string dst)
         {
             _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
+            //var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
+            //_audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
 
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
             {
                 AudioSource = _audioEndPoint,
                 AudioSink = _audioEndPoint
             });
+
             rtpAudioSession.AcceptRtpFromAny = true;
 
             rtpAudioSession.OnRtpPacketReceived += (ep, type, rtp) =>
@@ -325,7 +338,7 @@ namespace SipWA
             return rtpAudioSession;
         }
 
-        private VoIPMediaSession CreateRtpSessionTest(SIPUserAgent ua, string dst)
+        private VoIPMediaSession CreateRtpSessionTestSound(SIPUserAgent ua, string dst)
         {
             var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
 
@@ -337,7 +350,11 @@ namespace SipWA
             var audioExtrasSource = new AudioExtrasSource(new AudioEncoder(), new AudioSourceOptions { AudioSource = audioSource });
             audioExtrasSource.RestrictFormats(formats => codecs.Contains(formats.Codec));
 
+            // ver 1
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints { AudioSource = audioExtrasSource });
+
+            // ver 2
+            //var rtpAudioSession = new VoIPMediaSession(_audioEndPoint.ToMediaEndPoints());
             rtpAudioSession.AcceptRtpFromAny = true;
 
             // Wire up the event handler for RTP packets received from the remote party.
