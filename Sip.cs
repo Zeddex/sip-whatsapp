@@ -169,6 +169,7 @@ namespace SipWA
                         {
                             var uas = ua.AcceptCall(sipRequest);
                             var rtpSession = CreateRtpSession(ua, sipRequest.URI.User);
+                            //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
 
                             var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
                             await _sipTransport.SendResponseAsync(ringingResponse);
@@ -356,6 +357,7 @@ namespace SipWA
 
             // ver 2
             //var rtpAudioSession = new VoIPMediaSession(_audioEndPoint.ToMediaEndPoints());
+
             rtpAudioSession.AcceptRtpFromAny = true;
 
             // Wire up the event handler for RTP packets received from the remote party.
