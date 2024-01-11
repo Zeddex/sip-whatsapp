@@ -348,7 +348,8 @@ namespace SipWA
             }
 
             var audioExtrasSource = new AudioExtrasSource(new AudioEncoder(), new AudioSourceOptions { AudioSource = audioSource });
-            audioExtrasSource.RestrictFormats(formats => codecs.Contains(formats.Codec));
+            //audioExtrasSource.RestrictFormats(formats => codecs.Contains(formats.Codec));
+            audioExtrasSource.RestrictFormats(formats => Codecs.Contains(formats.Codec));
 
             // ver 1
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints { AudioSource = audioExtrasSource });
