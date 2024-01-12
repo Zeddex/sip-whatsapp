@@ -310,15 +310,19 @@ namespace SipWA
 
         private VoIPMediaSession CreateRtpSession(SIPUserAgent ua, string dst)
         {
+            // ver 1
+            //var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
+            //{
+            //    AudioSource = _audioEndPoint,
+            //    AudioSink = _audioEndPoint
+            //});
+
+            // ver 2
+            var rtpAudioSession = new VoIPMediaSession(_audioEndPoint.ToMediaEndPoints());
+
             _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
             //var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
             //_audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
-
-            var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
-            {
-                AudioSource = _audioEndPoint,
-                AudioSink = _audioEndPoint
-            });
 
             rtpAudioSession.AcceptRtpFromAny = true;
 

@@ -24,4 +24,10 @@
     <PackageReference Include="Spectre.Console" Version="0.48.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="ProjectCeilidh.PortAudio">
+      <HintPath>ProjectCeilidh\ProjectCeilidh.PortAudio.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

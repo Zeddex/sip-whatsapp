@@ -20,9 +20,9 @@ namespace SipWA
             //var whatsAppApi = new WhatsAppApi(waToken, waInstance);
 
             // sip credentials
-            string sipUsername = "u38-m13";
-            string sipPassword = "Pe3SUVagWsrYO4e";
-            string sipDomain = "185.12.237.56";
+            string sipUsername = "xxxx";
+            string sipPassword = "xxxx";
+            string sipDomain = "8.8.8.8";
             int sipPort = 5060;
             int sipExpire = 600;
             var sip = new Sip(sipUsername, sipPassword, sipDomain, sipPort, sipExpire);
