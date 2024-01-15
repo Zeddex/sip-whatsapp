@@ -13,6 +13,7 @@ using SIPSorcery.Net;
 using SIPSorcery.SIP;
 using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Windows;
+using demo;
 
 namespace SipWA
 {
@@ -25,16 +26,24 @@ namespace SipWA
         public int Expire { get; set; }
         public WhatsAppApp WhatsAppApp { get; set; }
         public bool IsCallCancelled { get; set; }
+        public bool Debug { get; set; }
         public List<AudioCodecsEnum> Codecs { get; set; }
 
-
         private readonly WindowsAudioEndPoint _audioEndPoint;
+        private readonly PortAudioEndPoint _portAudioEndPoint;
         private readonly SIPTransport _sipTransport;
         private readonly ConcurrentDictionary<string, SIPUserAgent> _calls;
+        private readonly string _stunServerHostname = "stun.l.google.com";
+        private readonly int _stunServerPort = 19302;
 
         public Sip(string user, string password, string domain, int port = 5060, int expire = 120)
         {
-            _audioEndPoint = new WindowsAudioEndPoint(new AudioEncoder());
+            // ver 1
+            //_audioEndPoint = new WindowsAudioEndPoint(new AudioEncoder());
+
+            // ver 2
+            _portAudioEndPoint = new PortAudioEndPoint(new AudioEncoder());
+
 
             User = user;
             Password = password;
@@ -49,6 +58,8 @@ namespace SipWA
             _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.Any, Port)));
             _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, Port)));
             _sipTransport.EnableTraceLogs();
+
+            //var stunClient = new STUNClient();
         }
 
         public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs)
@@ -120,14 +131,26 @@ namespace SipWA
                 {
                     Console.WriteLine($"Incoming call request: {localSipEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
 
-                    string callerNumber = Ext.ParseCallerNumber(sipRequest.URI.ToString());
-                    //Ext.WriteLog($"Caller number: {callerNumber}", ConsoleColor.Green);
-
                     var tryingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Trying, null);
                     await _sipTransport.SendResponseAsync(tryingResponse);
 
-                    //bool isWAValid = Ext.IsWANumberValid(callerNumber);
-                    bool isWaValid = WhatsAppApp.CheckNuberIsValid(callerNumber);
+                    string callerNumber;
+                    bool isWaValid;
+
+                    if (Debug)
+                    {
+                        callerNumber = "380999484704";
+                        isWaValid = true;
+                    }
+
+                    else
+                    {
+                        callerNumber = Ext.ParseCallerNumber(sipRequest.URI.ToString());
+                        //Ext.WriteLog($"Caller number: {callerNumber}", ConsoleColor.Green);
+
+                        //bool isWAValid = Ext.IsWANumberValid(callerNumber);
+                        isWaValid = WhatsAppApp.CheckNuberIsValid(callerNumber);
+                    }
 
                     if (!isWaValid)
                     {
@@ -316,15 +339,23 @@ namespace SipWA
             //    AudioSource = _audioEndPoint,
             //    AudioSink = _audioEndPoint
             //});
+            //_audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
             // ver 2
-            var rtpAudioSession = new VoIPMediaSession(_audioEndPoint.ToMediaEndPoints());
-
-            _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
-            //var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
-            //_audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
+            var rtpAudioSession = new VoIPMediaSession(_portAudioEndPoint.ToMediaEndPoints());
+            _portAudioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
             rtpAudioSession.AcceptRtpFromAny = true;
+
+            // Query the STUN server for the public IP and port.
+            //var localEndPoint = rtpAudioSession.RTPChannel.LocalEndPoint;
+            //var stunResult = STUNClient.GetPublicEndPoint(_stunServerHostname, _stunServerPort, localEndPoint);
+            //if (stunResult != null)
+            //{
+            //    // Update the RTP session with the public end point from the STUN server.
+            //    rtpAudioSession.RTPChannel.SetRemoteSTUNPublicIP(stunResult.PublicEndPoint);
+            //    Console.WriteLine($"STUN public IP: {stunResult.PublicEndPoint}");
+            //}
 
             rtpAudioSession.OnRtpPacketReceived += (ep, type, rtp) =>
             {

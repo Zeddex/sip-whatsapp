@@ -38,7 +38,6 @@ namespace SipWA
 
         public static string ParseCallerNumber(string callerData)
         {
-            //var regex = new Regex("(?<=sip:\\+).*(?=@)");
             var regex = new Regex("(?<=sip:).*(?=@)");
             string phoneNumber = regex.Match(callerData).Value;
 

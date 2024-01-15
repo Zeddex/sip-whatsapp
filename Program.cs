@@ -20,12 +20,13 @@ namespace SipWA
             //var whatsAppApi = new WhatsAppApi(waToken, waInstance);
 
             // sip credentials
-            string sipUsername = "xxxx";
-            string sipPassword = "xxxx";
-            string sipDomain = "8.8.8.8";
+            string sipUsername = "sipUsername";
+            string sipPassword = "sipPassword";
+            string sipDomain = "sipDomain";
             int sipPort = 5060;
             int sipExpire = 600;
             var sip = new Sip(sipUsername, sipPassword, sipDomain, sipPort, sipExpire);
+            sip.Debug = true;
             sip.Init(waApp, codecs);
 
             Console.ReadKey();
