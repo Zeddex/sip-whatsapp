@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Linq;
 
 namespace SipWA
 {
-    class Program
+    internal class Program
     {
-        static void Main()
+        private static void Main()
         {
             var menu = new Menu();
             menu.StartInfo();
@@ -25,8 +24,10 @@ namespace SipWA
             string sipDomain = "sipDomain";
             int sipPort = 5060;
             int sipExpire = 600;
-            var sip = new Sip(sipUsername, sipPassword, sipDomain, sipPort, sipExpire);
-            sip.Debug = true;
+            var sip = new Sip(sipUsername, sipPassword, sipDomain, sipPort, sipExpire)
+            {
+                Debug = false
+            };
             sip.Init(waApp, codecs);
 
             Console.ReadKey();
