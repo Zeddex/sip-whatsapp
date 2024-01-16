@@ -20,14 +20,8 @@
     <PackageReference Include="Appium.WebDriver" Version="4.4.5" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SIPSorcery" Version="6.0.12" />
+    <PackageReference Include="SIPSorcery" Version="6.2.0" />
     <PackageReference Include="Spectre.Console" Version="0.48.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="ProjectCeilidh.PortAudio">
-      <HintPath>ProjectCeilidh\ProjectCeilidh.PortAudio.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
 </Project>

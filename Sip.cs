@@ -13,7 +13,6 @@ using SIPSorcery.Net;
 using SIPSorcery.SIP;
 using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Windows;
-using demo;
 
 namespace SipWA
 {
@@ -30,7 +29,6 @@ namespace SipWA
         public List<AudioCodecsEnum> Codecs { get; set; }
 
         private readonly WindowsAudioEndPoint _audioEndPoint;
-        private readonly PortAudioEndPoint _portAudioEndPoint;
         private readonly SIPTransport _sipTransport;
         private readonly ConcurrentDictionary<string, SIPUserAgent> _calls;
         private readonly string _stunServerHostname = "stun.l.google.com";
@@ -38,12 +36,7 @@ namespace SipWA
 
         public Sip(string user, string password, string domain, int port = 5060, int expire = 120)
         {
-            // ver 1
-            //_audioEndPoint = new WindowsAudioEndPoint(new AudioEncoder());
-
-            // ver 2
-            _portAudioEndPoint = new PortAudioEndPoint(new AudioEncoder());
-
+            _audioEndPoint = new WindowsAudioEndPoint(new AudioEncoder());
 
             User = user;
             Password = password;
@@ -333,17 +326,12 @@ namespace SipWA
 
         private VoIPMediaSession CreateRtpSession(SIPUserAgent ua, string dst)
         {
-            // ver 1
-            //var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
-            //{
-            //    AudioSource = _audioEndPoint,
-            //    AudioSink = _audioEndPoint
-            //});
-            //_audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
-
-            // ver 2
-            var rtpAudioSession = new VoIPMediaSession(_portAudioEndPoint.ToMediaEndPoints());
-            _portAudioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
+            var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints
+            {
+                AudioSource = _audioEndPoint,
+                AudioSink = _audioEndPoint
+            });
+            _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
             rtpAudioSession.AcceptRtpFromAny = true;
 
