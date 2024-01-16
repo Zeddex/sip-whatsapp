@@ -43,11 +43,25 @@ namespace SipWA
 
             if (string.IsNullOrWhiteSpace(phoneNumber))
             {
-                Ext.WriteLog($"Parsing number error", ConsoleColor.Red);
+                WriteLog($"Parsing number error", ConsoleColor.Red);
                 return "";
             }
 
             return phoneNumber;
+        }
+
+        public static string ParseHost(string callerData)
+        {
+            var regex = new Regex("(?<=@).*(?=:)");
+            string host = regex.Match(callerData).Value;
+
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                WriteLog($"Parsing host error", ConsoleColor.Red);
+                return "";
+            }
+
+            return host;
         }
 
         public static bool IsWANumberValid(string number)

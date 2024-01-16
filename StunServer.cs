@@ -13,13 +13,13 @@ using System.Net;
 
 namespace SipWA
 {
-    internal class Stun
+    internal class StunServer
     {
         private readonly STUNListener _primarySTUNListener;
         private readonly STUNListener _secondarySTUNListener;
         private readonly STUNServer _stunServer;
 
-        public Stun()
+        public StunServer()
         {
             // STUN servers need two separate end points to listen on.
             IPEndPoint primaryEndPoint = new IPEndPoint(IPAddress.Any, 3478);

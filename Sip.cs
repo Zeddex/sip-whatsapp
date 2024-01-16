@@ -31,8 +31,6 @@ namespace SipWA
         private readonly WindowsAudioEndPoint _audioEndPoint;
         private readonly SIPTransport _sipTransport;
         private readonly ConcurrentDictionary<string, SIPUserAgent> _calls;
-        private readonly string _stunServerHostname = "stun.l.google.com";
-        private readonly int _stunServerPort = 19302;
 
         public Sip(string user, string password, string domain, int port = 5060, int expire = 120)
         {
@@ -52,7 +50,8 @@ namespace SipWA
             _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, Port)));
             _sipTransport.EnableTraceLogs();
 
-            //var stunClient = new STUNClient();
+            StunClient stunClient = new StunClient("stun.l.google.com");
+            stunClient.Run();
         }
 
         public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs)
@@ -159,6 +158,9 @@ namespace SipWA
                     else
                     {
                         Ext.WriteLog($"{callerNumber} is registered in WhatsApp", ConsoleColor.Green);
+
+                        string host = Ext.ParseHost(sipRequest.URI.ToString());
+                        _sipTransport.ContactHost = host;
 
                         var ua = new SIPUserAgent(_sipTransport, null);
 
@@ -334,16 +336,6 @@ namespace SipWA
             _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
             rtpAudioSession.AcceptRtpFromAny = true;
-
-            // Query the STUN server for the public IP and port.
-            //var localEndPoint = rtpAudioSession.RTPChannel.LocalEndPoint;
-            //var stunResult = STUNClient.GetPublicEndPoint(_stunServerHostname, _stunServerPort, localEndPoint);
-            //if (stunResult != null)
-            //{
-            //    // Update the RTP session with the public end point from the STUN server.
-            //    rtpAudioSession.RTPChannel.SetRemoteSTUNPublicIP(stunResult.PublicEndPoint);
-            //    Console.WriteLine($"STUN public IP: {stunResult.PublicEndPoint}");
-            //}
 
             rtpAudioSession.OnRtpPacketReceived += (ep, type, rtp) =>
             {
