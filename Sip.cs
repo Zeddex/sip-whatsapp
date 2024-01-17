@@ -116,6 +116,7 @@ namespace SipWA
         public void StopService()
         {
             _sipTransport.Shutdown();
+            _stunClient.Stop();
         }
 
         private async Task OnRequest(SIPEndPoint localSipEndPoint, SIPEndPoint remoteEndPoint, SIPRequest sipRequest)
