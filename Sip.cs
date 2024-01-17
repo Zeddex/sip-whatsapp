@@ -25,7 +25,6 @@ namespace SipWA
         public int Expire { get; set; }
         public WhatsAppApp WhatsAppApp { get; set; }
         public bool IsCallCancelled { get; set; }
-        public bool Debug { get; set; }
         public List<AudioCodecsEnum> Codecs { get; set; }
 
         private readonly WindowsAudioEndPoint _audioEndPoint;
@@ -50,7 +49,7 @@ namespace SipWA
             _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, Port)));
             _sipTransport.EnableTraceLogs();
 
-            StunClient stunClient = new StunClient("stun.l.google.com");
+            var stunClient = new StunClient("stun.l.google.com");
             stunClient.Run();
         }
 
@@ -126,23 +125,11 @@ namespace SipWA
                     var tryingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Trying, null);
                     await _sipTransport.SendResponseAsync(tryingResponse);
 
-                    string callerNumber;
-                    bool isWaValid;
+                    string callerNumber = Ext.ParseCallerNumber(sipRequest.URI.ToString());
+                    //Ext.WriteLog($"Caller number: {callerNumber}", ConsoleColor.Green);
 
-                    if (Debug)
-                    {
-                        callerNumber = "380999484704";
-                        isWaValid = true;
-                    }
-
-                    else
-                    {
-                        callerNumber = Ext.ParseCallerNumber(sipRequest.URI.ToString());
-                        //Ext.WriteLog($"Caller number: {callerNumber}", ConsoleColor.Green);
-
-                        //bool isWAValid = Ext.IsWANumberValid(callerNumber);
-                        isWaValid = WhatsAppApp.CheckNuberIsValid(callerNumber);
-                    }
+                    //bool isWAValid = Ext.IsWANumberValid(callerNumber);
+                    bool isWaValid = WhatsAppApp.CheckNuberIsValid(callerNumber);
 
                     if (!isWaValid)
                     {
@@ -356,15 +343,16 @@ namespace SipWA
 
         private VoIPMediaSession CreateRtpSessionTestSound(SIPUserAgent ua, string dst)
         {
-            var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
-
             if (string.IsNullOrEmpty(dst) || !Enum.TryParse(dst, out AudioSourcesEnum audioSource))
             {
                 audioSource = AudioSourcesEnum.Music;
             }
 
             var audioExtrasSource = new AudioExtrasSource(new AudioEncoder(), new AudioSourceOptions { AudioSource = audioSource });
+
+            //var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMU, AudioCodecsEnum.PCMA, AudioCodecsEnum.G729 };
             //audioExtrasSource.RestrictFormats(formats => codecs.Contains(formats.Codec));
+
             audioExtrasSource.RestrictFormats(formats => Codecs.Contains(formats.Codec));
 
             // ver 1
