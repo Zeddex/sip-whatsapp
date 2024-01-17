@@ -36,5 +36,35 @@ namespace SipWA
 
             return parsedEnums;
         }
+
+        public string StunServer()
+        {
+            List<string> serversList = new List<string>()
+            {
+                "stun.l.google.com:19302",
+                "stun1.l.google.com:19302",
+                "stun2.l.google.com:19302",
+                "stun3.l.google.com:19302",
+                "stun4.l.google.com:19302",
+                "stun.ekiga.net",
+                "stun.ideasip.com",
+                "stun.schlund.de",
+                "stun.stunprotocol.org:3478",
+                "stun.voiparound.com",
+                "stun.voipbuster.com",
+                "stun.voipstunt.com",
+                "stun.voxgratia.org"
+            };
+
+            var server = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Select STUN server:")
+                    .PageSize(10)
+                    .MoreChoicesText("[grey](Move up and down to reveal more servers)[/]")
+                    .AddChoices(serversList)
+                    );
+
+            return server;
+        }
     }
 }

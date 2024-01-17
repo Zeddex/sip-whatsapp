@@ -27,6 +27,7 @@ namespace SipWA
         public bool IsCallCancelled { get; set; }
         public List<AudioCodecsEnum> Codecs { get; set; }
 
+        private StunClient _stunClient;
         private readonly WindowsAudioEndPoint _audioEndPoint;
         private readonly SIPTransport _sipTransport;
         private readonly ConcurrentDictionary<string, SIPUserAgent> _calls;
@@ -48,16 +49,15 @@ namespace SipWA
             _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.Any, Port)));
             _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, Port)));
             _sipTransport.EnableTraceLogs();
-
-            var stunClient = new StunClient("stun.l.google.com");
-            stunClient.Run();
         }
 
-        public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs)
+        public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs, string stunServer)
         {
             WhatsAppApp = wa;
 
             Codecs = codecs;
+
+            InitializeStunClient(stunServer);
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
 
@@ -73,6 +73,12 @@ namespace SipWA
 
             var userAgent = StartRegistrations(_sipTransport, User, Password, Domain, Expire);
             userAgent.Start();
+        }
+
+        public void InitializeStunClient(string stunServerAddress)
+        {
+            _stunClient = new StunClient(stunServerAddress);
+            _stunClient.Run();
         }
 
         private SIPRegistrationUserAgent StartRegistrations(SIPTransport sipTransport, string username, string password, string domain, int expiry)
@@ -173,8 +179,9 @@ namespace SipWA
                         if (!IsCallCancelled)
                         {
                             var uas = ua.AcceptCall(sipRequest);
-                            var rtpSession = CreateRtpSession(ua, sipRequest.URI.User);
-                            //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
+
+                            //var rtpSession = CreateRtpSession(ua, sipRequest.URI.User);
+                            var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
 
                             var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
                             await _sipTransport.SendResponseAsync(ringingResponse);
