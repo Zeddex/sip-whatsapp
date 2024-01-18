@@ -13,6 +13,8 @@ using SIPSorcery.Net;
 using SIPSorcery.SIP;
 using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Windows;
+using Org.BouncyCastle.Asn1.Ocsp;
+using System.Threading;
 
 namespace SipWA
 {
@@ -26,6 +28,7 @@ namespace SipWA
         public WhatsAppApp WhatsAppApp { get; set; }
         public bool IsCallCancelled { get; set; }
         public List<AudioCodecsEnum> Codecs { get; set; }
+        //public SIPUserAgent ua { get; set; }
 
         private StunClient _stunClient;
         private readonly WindowsAudioEndPoint _audioEndPoint;
@@ -60,6 +63,8 @@ namespace SipWA
             InitializeStunClient(stunServer);
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
+
+            //ua = new SIPUserAgent(_sipTransport, null);
 
             var userAgent = StartRegistrations(_sipTransport, User, Password, Domain, Expire);
             userAgent.Start();
@@ -217,12 +222,20 @@ namespace SipWA
                             {
                                 Ext.WriteLog("WA answered", ConsoleColor.Green);
 
-                                await ua.Answer(uas, rtpSession);
-                                Ext.WriteLog("SIP answered", ConsoleColor.Blue);
+                                //await ua.Answer(uas, rtpSession);
+                                var isAnswered = ua.Answer(uas, rtpSession).Result;
+
+                                if (isAnswered)
+                                {
+                                    Ext.WriteLog("SIP answered", ConsoleColor.Blue);
+                                }
 
                                 if (ua.IsCallActive)
                                 {
                                     await rtpSession.Start();
+                                    Thread.Sleep(3000);
+                                    Ext.WriteLog("RTP session started", ConsoleColor.Green);
+
                                     _calls.TryAdd(ua.Dialogue.CallId, ua);
                                     //Ext.WriteLog($"Caller id = {ua.Dialogue.CallId}", ConsoleColor.Gray);
                                 }
@@ -234,13 +247,14 @@ namespace SipWA
                             }
 
                             // closing RTP session
-                            ua.Hangup();
                             rtpSession.Close("End call");
 
-                            if (ua.Dialogue != null)
+                           if (ua.Dialogue != null)
                             {
                                 EndCall(ua.Dialogue.CallId);
                             }
+
+                            //ua.OnCallHungup -= OnHangup;
 
                             WhatsAppApp.ReopenApp();
                         }

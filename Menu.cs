@@ -41,6 +41,7 @@ namespace SipWA
         {
             List<string> serversList = new List<string>()
             {
+                "stun.schlund.de",
                 "stun.l.google.com:19302",
                 "stun1.l.google.com:19302",
                 "stun2.l.google.com:19302",
@@ -48,7 +49,6 @@ namespace SipWA
                 "stun4.l.google.com:19302",
                 "stun.ekiga.net",
                 "stun.ideasip.com",
-                "stun.schlund.de",
                 "stun.stunprotocol.org:3478",
                 "stun.voiparound.com",
                 "stun.voipbuster.com",

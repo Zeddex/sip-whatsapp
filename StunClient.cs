@@ -73,7 +73,7 @@ namespace SipWA
                 }
                 else
                 {
-                    Ext.WriteLog("The STUN client could not determine the public IP address.", ConsoleColor.Cyan);
+                    Ext.WriteLog("The STUN client could not determine the public IP address.", ConsoleColor.Red);
                 }
 
                 return publicIP;
