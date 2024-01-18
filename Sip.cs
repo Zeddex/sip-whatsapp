@@ -181,8 +181,8 @@ namespace SipWA
                         {
                             var uas = ua.AcceptCall(sipRequest);
 
-                            //var rtpSession = CreateRtpSession(ua, sipRequest.URI.User);
-                            var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
+                            var rtpSession = CreateRtpSession(ua, sipRequest.URI.User);
+                            //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
 
                             var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
                             await _sipTransport.SendResponseAsync(ringingResponse);
@@ -233,6 +233,8 @@ namespace SipWA
                                 }
                             }
 
+                            // closing RTP session
+                            ua.Hangup();
                             rtpSession.Close("End call");
 
                             if (ua.Dialogue != null)

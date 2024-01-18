@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using SIPSorcery.Net;
 
+// https://github.com/sipsorcery-org/sipsorcery/issues/904
+
 namespace SipWA
 {
     public class StunClient
