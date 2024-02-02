@@ -7,7 +7,7 @@ using System.Net;
 using System.IO;
 using Newtonsoft.Json.Linq;
 
-namespace SipWA
+namespace SipIntercept
 {
     public class WhatsAppApi
     {

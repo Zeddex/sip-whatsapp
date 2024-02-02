@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 
-namespace SipWA
+namespace SipIntercept
 {
     public class WhatsAppApp
     {

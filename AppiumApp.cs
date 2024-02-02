@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SipWA
+namespace SipIntercept
 {
     public class AppiumApp
     {

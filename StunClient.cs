@@ -9,7 +9,7 @@ using SIPSorcery.Net;
 
 // https://github.com/sipsorcery-org/sipsorcery/issues/904
 
-namespace SipWA
+namespace SipIntercept
 {
     public class StunClient
     {

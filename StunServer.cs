@@ -11,7 +11,7 @@ using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Windows;
 using System.Net;
 
-namespace SipWA
+namespace SipIntercept
 {
     internal class StunServer
     {

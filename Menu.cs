@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 using Spectre.Console;
 using SIPSorceryMedia.Abstractions;
 
-namespace SipWA
+namespace SipIntercept
 {
     internal class Menu
     {
         public void StartInfo()
         {
-            AnsiConsole.MarkupLine("[bold blue]SIP - WhatsApp[/]\n");
+            AnsiConsole.MarkupLine("[bold blue]SIP Handler[/]\n");
         }
 
         public List<AudioCodecsEnum> CodecsList()

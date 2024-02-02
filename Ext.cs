@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 using SIPSorcery.SIP;
 using SIPSorceryMedia.Abstractions;
 
-namespace SipWA
+namespace SipIntercept
 {
     internal class Ext
     {

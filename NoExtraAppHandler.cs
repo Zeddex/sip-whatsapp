@@ -15,27 +15,37 @@ using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Windows;
 using Org.BouncyCastle.Asn1.Ocsp;
 using System.Threading;
+using System.Net.Sockets;
+using NAudio.Wave;
+using NAudio.MediaFoundation;
+using Spectre.Console;
+using WebSocketSharp;
 
-namespace SipWA
+namespace SipIntercept
 {
-    public class Sip
+    public class NoExtraAppHandler
     {
+        event EventHandler<EventArgs> OnCallStarted;
+        event EventHandler<EventArgs> OnActiveCall;
+        event EventHandler<EventArgs> OnValidNumber;
+        event EventHandler<EventArgs> OnCallEnded;
+        event EventHandler<EventArgs> OnCallDeclined;
+
         public int Port { get; set; }
         public string User { get; set; }
         public string Password { get; set; }
         public string Domain { get; set; }
         public int Expire { get; set; }
-        public WhatsAppApp WhatsAppApp { get; set; }
         public bool IsCallCancelled { get; set; }
         public List<AudioCodecsEnum> Codecs { get; set; }
-        //public SIPUserAgent ua { get; set; }
+        public VoIPMediaSession RtpSession { get; set; }
 
         private StunClient _stunClient;
         private readonly WindowsAudioEndPoint _audioEndPoint;
         private readonly SIPTransport _sipTransport;
         private readonly ConcurrentDictionary<string, SIPUserAgent> _calls;
 
-        public Sip(string user, string password, string domain, int port = 5060, int expire = 120)
+        public NoExtraAppHandler(string user, string password, string domain, int port = 5060, int expire = 120)
         {
             _audioEndPoint = new WindowsAudioEndPoint(new AudioEncoder());
 
@@ -54,25 +64,12 @@ namespace SipWA
             _sipTransport.EnableTraceLogs();
         }
 
-        public void Init(WhatsAppApp wa, List<AudioCodecsEnum> codecs, string stunServer)
+        public void Init(List<AudioCodecsEnum> codecs, string? stunServer = null)
         {
-            WhatsAppApp = wa;
-
             Codecs = codecs;
 
-            InitializeStunClient(stunServer);
-
-            _sipTransport.SIPTransportRequestReceived += OnRequest;
-
-            //ua = new SIPUserAgent(_sipTransport, null);
-
-            var userAgent = StartRegistrations(_sipTransport, User, Password, Domain, Expire);
-            userAgent.Start();
-        }
-
-        public void Init(WhatsAppApp wa)
-        {
-            WhatsAppApp = wa;
+            if (stunServer != null)
+                InitializeStunClient(stunServer);
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
 
@@ -137,29 +134,20 @@ namespace SipWA
                     var tryingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Trying, null);
                     await _sipTransport.SendResponseAsync(tryingResponse);
 
-                    string callerNumber = Ext.ParseCallerNumber(sipRequest.URI.ToString());
-                    //Ext.WriteLog($"Caller number: {callerNumber}", ConsoleColor.Green);
-
-                    //bool isWAValid = Ext.IsWANumberValid(callerNumber);
-                    bool isWaValid = WhatsAppApp.CheckNuberIsValid(callerNumber);
-
-                    if (!isWaValid)
+                    if (!AnsiConsole.Confirm("Accept call?"))
                     {
-                        Ext.WriteLog($"{callerNumber} is not registered in WhatsApp", ConsoleColor.Gray);
-
                         //decline the call
                         var unavailResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.ServiceUnavailable, null);
                         await _sipTransport.SendResponseAsync(unavailResponse);
 
-                        Console.WriteLine($"Sent {SIPResponseStatusCodesEnum.ServiceUnavailable} to {sipRequest.URI}");
+                        AnsiConsole.MarkupLine($"Sent {SIPResponseStatusCodesEnum.ServiceUnavailable} to {sipRequest.URI}");
                     }
 
                     else
                     {
-                        Ext.WriteLog($"{callerNumber} is registered in WhatsApp", ConsoleColor.Green);
-
-                        string host = Ext.ParseHost(sipRequest.URI.ToString());
-                        _sipTransport.ContactHost = host;
+                        // STUN
+                        //string host = Ext.ParseHost(sipRequest.URI.ToString());
+                        //_sipTransport.ContactHost = host;
 
                         var ua = new SIPUserAgent(_sipTransport, null);
 
@@ -168,7 +156,7 @@ namespace SipWA
                         ua.ServerCallCancelled += (_) =>
                         {
                             Console.WriteLine("Incoming call cancelled by remote party.");
-                            WhatsAppApp.EndCall();
+                            EndCall(ua.Dialogue);
 
                             IsCallCancelled = true;
                         };
@@ -176,7 +164,7 @@ namespace SipWA
                         ua.ServerCallRingTimeout += (uas) =>
                         {
                             Console.WriteLine($"Incoming call timed out in {uas.ClientTransaction.TransactionState} state waiting for client ACK, terminating.");
-                            WhatsAppApp.EndCall();
+                            EndCall(ua.Dialogue);
                             ua.Hangup();
 
                             IsCallCancelled = true;
@@ -186,77 +174,47 @@ namespace SipWA
                         {
                             var uas = ua.AcceptCall(sipRequest);
 
-                            var rtpSession = CreateRtpSession(ua, sipRequest.URI.User);
+                            RtpSession = CreateRtpSession(ua, sipRequest.URI.User);
                             //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
 
                             var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
                             await _sipTransport.SendResponseAsync(ringingResponse);
 
-                            Ext.WriteLog("Calling to whatsapp...", ConsoleColor.Blue);
-                            WhatsAppApp.OpenChat(callerNumber);
-                            WhatsAppApp.CallCurrentContact();
+                            await ua.Answer(uas, RtpSession);
 
-                            while (!WhatsAppApp.IsRinging())
+                            if (ua.IsCallActive)
+                            {
+                                await RtpSession.Start();
+                                Ext.WriteLog("RTP session started", ConsoleColor.Green);
+
+                                _calls.TryAdd(ua.Dialogue.CallId, ua);
+                            }
+
+                            //Ext.WriteLog("Press SPACE to end the call", ConsoleColor.Red);
+
+                            //bool exitKey = false;
+                            //Task task = Task.Run(() =>
+                            //{
+                            //    while (Console.ReadKey().Key != ConsoleKey.Spacebar)
+                            //    {
+                            //        exitKey = true;
+
+                            //        if (exitKey == false)
+                            //            break;
+                            //    }
+                            //});
+
+                            //while (!exitKey)
+                            //{
+                            //    await Task.Delay(100);
+                            //}
+
+                            while (true)
                             {
                                 await Task.Delay(100);
                             }
 
-                            while (!WhatsAppApp.IsCallActive())
-                            {
-                                await Task.Delay(100);
-
-                                if (WhatsAppApp.IsCallDeclined())
-                                {
-                                    Ext.WriteLog("WA call unanswered or declined", ConsoleColor.Red);
-                                    IsCallCancelled = true;
-
-                                    //decline the call
-                                    var busyResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.BusyHere, null);
-                                    await _sipTransport.SendResponseAsync(busyResponse);
-
-                                    break;
-                                }     
-                            }
-
-                            if (!IsCallCancelled)
-                            {
-                                Ext.WriteLog("WA answered", ConsoleColor.Green);
-
-                                //await ua.Answer(uas, rtpSession);
-                                var isAnswered = ua.Answer(uas, rtpSession).Result;
-
-                                if (isAnswered)
-                                {
-                                    Ext.WriteLog("SIP answered", ConsoleColor.Blue);
-                                }
-
-                                if (ua.IsCallActive)
-                                {
-                                    await rtpSession.Start();
-                                    Thread.Sleep(3000);
-                                    Ext.WriteLog("RTP session started", ConsoleColor.Green);
-
-                                    _calls.TryAdd(ua.Dialogue.CallId, ua);
-                                    //Ext.WriteLog($"Caller id = {ua.Dialogue.CallId}", ConsoleColor.Gray);
-                                }
-
-                                while (WhatsAppApp.IsCallingScreen())
-                                {
-                                    await Task.Delay(100);
-                                }
-                            }
-
-                            // closing RTP session
-                            rtpSession.Close("End call");
-
-                           if (ua.Dialogue != null)
-                            {
-                                EndCall(ua.Dialogue.CallId);
-                            }
-
-                            //ua.OnCallHungup -= OnHangup;
-
-                            WhatsAppApp.ReopenApp();
+                            EndCall(ua.Dialogue, RtpSession);
                         }
                     }
                 }
@@ -268,6 +226,8 @@ namespace SipWA
                         await _sipTransport.SendResponseAsync(okResponse);
                         Ext.WriteLog($"Call ended with 200 OK sent to {sipRequest.URI}", ConsoleColor.Green);
 
+                        EndCall(ua.Dialogue, RtpSession);
+
                         ua.Close();
                     }
                     else
@@ -275,11 +235,6 @@ namespace SipWA
                         // The call does not exist or is already terminated.
                         var notFoundResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.CallLegTransactionDoesNotExist, null);
                         await _sipTransport.SendResponseAsync(notFoundResponse);
-                    }
-
-                    if (WhatsAppApp.IsCallingScreen())
-                    {
-                        WhatsAppApp.EndCall();
                     }
                 }
                 else if (sipRequest.Method == SIPMethodsEnum.SUBSCRIBE)
@@ -305,17 +260,24 @@ namespace SipWA
             }
         }
 
-        private void EndCall(string callId)
+        private void EndCall(SIPDialogue dialogue, VoIPMediaSession rtpSession = null)
         {
-            if (_calls.TryGetValue(callId, out var userAgent))
+            rtpSession?.Close("Call ended");
+
+            if (dialogue != null)
             {
-                userAgent.Hangup();
-                _calls.TryRemove(callId, out _);  // Optionally remove the call from the dictionary
-                Console.WriteLine("Call ended with BYE request.");
-            }
-            else
-            {
-                Console.WriteLine("Call not found.");
+                string callId = dialogue.CallId;
+
+                if (_calls.TryGetValue(callId, out var userAgent))
+                {
+                    userAgent.Hangup();
+                    _calls.TryRemove(callId, out _);
+                    Console.WriteLine("Call ended with BYE request.");
+                }
+                else
+                {
+                    //Console.WriteLine("Call not found.");
+                }
             }
         }
 
@@ -333,8 +295,6 @@ namespace SipWA
                     }
                 }
             }
-
-            WhatsAppApp.EndCall();
         }
 
         private VoIPMediaSession CreateRtpSession(SIPUserAgent ua, string dst)
@@ -347,11 +307,6 @@ namespace SipWA
             _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
 
             rtpAudioSession.AcceptRtpFromAny = true;
-
-            rtpAudioSession.OnRtpPacketReceived += (ep, type, rtp) =>
-            {
-                // Handle incoming RTP packets
-            };
 
             rtpAudioSession.OnTimeout += (_) =>
             {
@@ -379,19 +334,9 @@ namespace SipWA
 
             audioExtrasSource.RestrictFormats(formats => Codecs.Contains(formats.Codec));
 
-            // ver 1
             var rtpAudioSession = new VoIPMediaSession(new MediaEndPoints { AudioSource = audioExtrasSource });
 
-            // ver 2
-            //var rtpAudioSession = new VoIPMediaSession(_audioEndPoint.ToMediaEndPoints());
-
             rtpAudioSession.AcceptRtpFromAny = true;
-
-            // Wire up the event handler for RTP packets received from the remote party.
-            rtpAudioSession.OnRtpPacketReceived += (ep, type, rtp) =>
-            {
-                // The raw audio data is available in rtpPacket.Payload
-            };
 
             rtpAudioSession.OnTimeout += (_) =>
             {
