@@ -12,8 +12,4 @@ public interface IApp
     bool IsCallDeclined();
     bool IsCallActive();
     bool IsRinging();
-    void CallAgain();
-    bool IsNoAnswer();
-    bool IsContactScreen();
-    void CancellCall();
 }

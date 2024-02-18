@@ -17,72 +17,52 @@ namespace SipIntercept
 
         public void Init()
         {
-            throw new NotImplementedException();
+            Run();
         }
 
         public void ReopenApp()
         {
-            throw new NotImplementedException();
+            
         }
 
         public void OpenChat(string number)
         {
-            throw new NotImplementedException();
+            
         }
 
         public bool CheckNuberIsValid(string number)
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public void CallCurrentContact()
         {
-            throw new NotImplementedException();
+            
         }
 
         public void EndCall()
         {
-            throw new NotImplementedException();
+            
         }
 
         public bool IsCallingScreen()
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public bool IsCallDeclined()
         {
-            throw new NotImplementedException();
+            return false;
         }
 
         public bool IsCallActive()
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public bool IsRinging()
         {
-            throw new NotImplementedException();
-        }
-
-        public void CallAgain()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsNoAnswer()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsContactScreen()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CancellCall()
-        {
-            throw new NotImplementedException();
+            return true;
         }
     }
 }

@@ -27,7 +27,7 @@ namespace SipIntercept
         public bool IsCallEnded { get; set; }
         public bool IsInvite { get; set; }
         public VoIPMediaSession? RtpSession { get; set; }
-        public IApp? App { get; set; }
+        public IApp App { get; set; }
 
         private StunClient _stunClient;
         private readonly WindowsAudioEndPoint _audioEndPoint;
@@ -171,7 +171,6 @@ namespace SipIntercept
                             var uas = ua.AcceptCall(sipRequest);
 
                             RtpSession = CreateRtpSession(ua, sipRequest.URI.User);
-                            //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
 
                             var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
                             await _sipTransport.SendResponseAsync(ringingResponse);
@@ -227,9 +226,9 @@ namespace SipIntercept
                                 {
                                     await Task.Delay(100);
                                 }
-                            }
 
-                            EndCall(ua.Dialogue);
+                                EndCall(ua.Dialogue);
+                            }
                         }
                     }
 

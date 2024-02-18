@@ -3,84 +3,60 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using OpenQA.Selenium;
+using SIPSorcery.SIP;
+using Spectre.Console;
 
 namespace SipIntercept
 {
     internal class ConsoleTestApp : IApp
     {
         public void Init()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CloseApp()
-        {
-            throw new NotImplementedException();
-        }
+        {}
 
         public void ReopenApp()
-        {
-            throw new NotImplementedException();
-        }
+        {}
 
         public void OpenChat(string number)
-        {
-            throw new NotImplementedException();
-        }
+        {}
 
         public bool CheckNuberIsValid(string number)
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public void CallCurrentContact()
-        {
-            throw new NotImplementedException();
-        }
+        {}
 
         public void EndCall()
-        {
-            throw new NotImplementedException();
-        }
+        {}
 
         public bool IsCallingScreen()
         {
-            throw new NotImplementedException();
+            bool isCallScreen = true;
+
+            AnsiConsole.MarkupLine("Press Esc to end the call");
+
+            while (Console.ReadKey(true).Key != ConsoleKey.Escape)
+            {
+            }
+
+            return isCallScreen;
         }
 
         public bool IsCallDeclined()
         {
-            throw new NotImplementedException();
+            return false;
         }
 
         public bool IsCallActive()
         {
-            throw new NotImplementedException();
+            return true;
         }
 
         public bool IsRinging()
         {
-            throw new NotImplementedException();
-        }
-
-        public void CallAgain()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsNoAnswer()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsContactScreen()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CancellCall()
-        {
-            throw new NotImplementedException();
+            return true;
         }
     }
 }

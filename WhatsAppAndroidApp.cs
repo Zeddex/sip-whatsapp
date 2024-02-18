@@ -7,18 +7,13 @@ namespace SipIntercept
     {
         private const string AppPackage = "com.whatsapp";
         private const string AppActivity = "com.whatsapp.Main";
-        private static Appium? _app;
+        private static Appium _app;
 
         public void Init()
         {
             _app = new Appium();
             _app.Init(AppPackage, AppActivity);
             _app.RunCurrentApp();
-        }
-
-        public void CloseApp()
-        {
-            _app.CloseApp();
         }
 
         public void ReopenApp()
@@ -72,26 +67,6 @@ namespace SipIntercept
             return isCallDeclined;
         }
 
-        public string? GetActivityDump()
-        {
-            //string command = "adb shell dumpsys activity com.whatsapp | findstr audio_call_status";
-            string command = "adb shell dumpsys activity com.whatsapp";
-            string? output = _app.ExecuteAdbShellCommand(command);
-
-            return output;
-        }
-
-        /// <summary>
-        /// Check if dump contains filter string
-        /// </summary>
-        /// <param name="filter"></param>
-        /// <returns></returns>
-        public bool ActivityDumpFilter(string filter)
-        {
-            string? dump = GetActivityDump();
-            return dump != null && dump.Contains(filter);
-        }
-
         public bool IsCallActive()
         {
             bool isCallActive = ActivityDumpFilter("audio_call_status");
@@ -104,28 +79,24 @@ namespace SipIntercept
             return isRinging;
         }
 
-        public void CallAgain()
+        /// <summary>
+        /// Check if dump contains filter string
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        private bool ActivityDumpFilter(string filter)
         {
-            _app.TryClick("//android.widget.ImageButton[@content-desc='Call again']");
+            string? dump = GetActivityDump();
+            return dump != null && dump.Contains(filter);
         }
 
-        public bool IsNoAnswer()
+        private string? GetActivityDump()
         {
-            bool isNoAnswer = _app.FindElement("//android.widget.ImageButton[@content-desc='Call again']");
+            //string command = "adb shell dumpsys activity com.whatsapp | findstr audio_call_status";
+            string command = "adb shell dumpsys activity com.whatsapp";
+            string? output = _app.ExecuteAdbShellCommand(command);
 
-            return isNoAnswer;
-        }
-
-        public bool IsContactScreen()
-        {
-            bool isContactScreen = _app.FindElement("//android.widget.ImageButton[@content-desc='New call']");
-
-            return isContactScreen;
-        }
-
-        public void CancellCall()
-        {
-            _app.TryClick("//android.widget.ImageButton[@content-desc='Cancel']");
+            return output;
         }
     }
 }

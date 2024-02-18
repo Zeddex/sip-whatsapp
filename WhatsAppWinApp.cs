@@ -18,12 +18,12 @@ namespace SipIntercept
 
         public void Init()
         {
-            throw new NotImplementedException();
+            Run();
         }
 
         public void ReopenApp()
         {
-            throw new NotImplementedException();
+            
         }
 
         public void OpenChat(string number)
@@ -48,7 +48,7 @@ namespace SipIntercept
 
         public void EndCall()
         {
-            throw new NotImplementedException();
+            
         }
 
         public bool IsCallingScreen()
@@ -67,26 +67,6 @@ namespace SipIntercept
         }
 
         public bool IsRinging()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CallAgain()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsNoAnswer()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsContactScreen()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CancellCall()
         {
             throw new NotImplementedException();
         }
