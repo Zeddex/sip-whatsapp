@@ -10,14 +10,14 @@ namespace SipIntercept
     internal class ContactsApp
     {
         private const string AppPackage = "com.android.contacts";
-        private const string AppActivity = "com.android.contacts.activities.PeopleActivity";        
+        private const string AppActivity = "com.android.contacts.activities.PeopleActivity";
         //private const string AppPackage = "com.samsung.android.app.contacts";
         //private const string AppActivity = "com.samsung.android.contacts.contactslist.PeopleActivity";
-        private static AppiumApp app;
+        private static Appium app;
 
         public void Init()
         {
-            app = new AppiumApp();
+            app = new Appium();
             app.Init(AppPackage, AppActivity);
             //app.RunCurrentApp();
         }

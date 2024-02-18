@@ -9,45 +9,37 @@ using System.Threading.Tasks;
 using SIPSorcery.SIP.App;
 using SIPSorcery.SIP;
 using SIPSorcery.Media;
-using SIPSorcery.Net;
-using SIPSorcery.SIP;
 using SIPSorceryMedia.Abstractions;
 using SIPSorceryMedia.Windows;
-using Org.BouncyCastle.Asn1.Ocsp;
-using System.Threading;
-using System.Net.Sockets;
-using NAudio.Wave;
-using NAudio.MediaFoundation;
 using Spectre.Console;
-using WebSocketSharp;
 
 namespace SipIntercept
 {
     public class NoExtraAppHandler
     {
-        event EventHandler<EventArgs> OnCallStarted;
-        event EventHandler<EventArgs> OnActiveCall;
-        event EventHandler<EventArgs> OnValidNumber;
-        event EventHandler<EventArgs> OnCallEnded;
-        event EventHandler<EventArgs> OnCallDeclined;
-
         public int Port { get; set; }
         public string User { get; set; }
         public string Password { get; set; }
         public string Domain { get; set; }
         public int Expire { get; set; }
         public bool IsCallCancelled { get; set; }
+        public bool IsCallEnded { get; set; }
+        public bool IsInvite { get; set; }
         public List<AudioCodecsEnum> Codecs { get; set; }
-        public VoIPMediaSession RtpSession { get; set; }
+        public VoIPMediaSession? RtpSession { get; set; }
 
         private StunClient _stunClient;
         private readonly WindowsAudioEndPoint _audioEndPoint;
         private readonly SIPTransport _sipTransport;
         private readonly ConcurrentDictionary<string, SIPUserAgent> _calls;
 
+
         public NoExtraAppHandler(string user, string password, string domain, int port = 5060, int expire = 120)
         {
             _audioEndPoint = new WindowsAudioEndPoint(new AudioEncoder());
+
+            var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMA };
+            _audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
 
             User = user;
             Password = password;
@@ -64,10 +56,8 @@ namespace SipIntercept
             _sipTransport.EnableTraceLogs();
         }
 
-        public void Init(List<AudioCodecsEnum> codecs, string? stunServer = null)
+        public void Init(string? stunServer = null)
         {
-            Codecs = codecs;
-
             if (stunServer != null)
                 InitializeStunClient(stunServer);
 
@@ -75,7 +65,7 @@ namespace SipIntercept
 
             var userAgent = StartRegistrations(_sipTransport, User, Password, Domain, Expire);
             userAgent.Start();
-        }
+        }  
 
         public void InitializeStunClient(string stunServerAddress)
         {
@@ -115,20 +105,15 @@ namespace SipIntercept
             }
         }
 
-        public void StopService()
-        {
-            _sipTransport.Shutdown();
-            _stunClient.Stop();
-        }
-
         private async Task OnRequest(SIPEndPoint localSipEndPoint, SIPEndPoint remoteEndPoint, SIPRequest sipRequest)
         {
             try
             {
-                IsCallCancelled = false;
-
-                if (sipRequest.Method == SIPMethodsEnum.INVITE)
+                if (sipRequest.Method == SIPMethodsEnum.INVITE && !IsInvite)
                 {
+                    IsInvite = true;
+                    IsCallCancelled = false;
+
                     Console.WriteLine($"Incoming call request: {localSipEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
 
                     var tryingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Trying, null);
@@ -145,10 +130,6 @@ namespace SipIntercept
 
                     else
                     {
-                        // STUN
-                        //string host = Ext.ParseHost(sipRequest.URI.ToString());
-                        //_sipTransport.ContactHost = host;
-
                         var ua = new SIPUserAgent(_sipTransport, null);
 
                         ua.OnCallHungup += OnHangup;
@@ -175,7 +156,6 @@ namespace SipIntercept
                             var uas = ua.AcceptCall(sipRequest);
 
                             RtpSession = CreateRtpSession(ua, sipRequest.URI.User);
-                            //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
 
                             var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
                             await _sipTransport.SendResponseAsync(ringingResponse);
@@ -190,33 +170,17 @@ namespace SipIntercept
                                 _calls.TryAdd(ua.Dialogue.CallId, ua);
                             }
 
-                            //Ext.WriteLog("Press SPACE to end the call", ConsoleColor.Red);
-
-                            //bool exitKey = false;
-                            //Task task = Task.Run(() =>
-                            //{
-                            //    while (Console.ReadKey().Key != ConsoleKey.Spacebar)
-                            //    {
-                            //        exitKey = true;
-
-                            //        if (exitKey == false)
-                            //            break;
-                            //    }
-                            //});
-
-                            //while (!exitKey)
-                            //{
-                            //    await Task.Delay(100);
-                            //}
-
-                            while (true)
+                            while (ua.IsCallActive)
                             {
                                 await Task.Delay(100);
                             }
 
-                            EndCall(ua.Dialogue, RtpSession);
+                            EndCall(ua.Dialogue);
                         }
                     }
+
+                    IsInvite = false;
+                    IsCallEnded = true;
                 }
                 else if (sipRequest.Method == SIPMethodsEnum.BYE)
                 {
@@ -224,9 +188,9 @@ namespace SipIntercept
                     {
                         var okResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
                         await _sipTransport.SendResponseAsync(okResponse);
-                        Ext.WriteLog($"Call ended with 200 OK sent to {sipRequest.URI}", ConsoleColor.Green);
+                        Ext.WriteLog("Call ended\n", ConsoleColor.Blue);
 
-                        EndCall(ua.Dialogue, RtpSession);
+                        EndCall(ua.Dialogue);
 
                         ua.Close();
                     }
@@ -260,40 +224,180 @@ namespace SipIntercept
             }
         }
 
-        private void EndCall(SIPDialogue dialogue, VoIPMediaSession rtpSession = null)
+        #region looped
+
+        //private async Task OnRequest(SIPEndPoint localSipEndPoint, SIPEndPoint remoteEndPoint, SIPRequest sipRequest)
+        //{
+        //    try
+        //    {
+        //        if (sipRequest.Method == SIPMethodsEnum.INVITE && !IsInvite)
+        //        {
+        //            IsInvite = true;
+        //            IsCallCancelled = false;
+
+        //            Console.WriteLine($"Incoming call request: {localSipEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
+
+        //            var tryingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Trying, null);
+        //            await _sipTransport.SendResponseAsync(tryingResponse);
+        //            //Ext.WriteLog("\n100 Trying sent\n", ConsoleColor.Blue);
+
+        //            if (!AnsiConsole.Confirm("Accept call?"))
+        //            {
+        //                //decline the call
+        //                var unavailResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.ServiceUnavailable, null);
+        //                await _sipTransport.SendResponseAsync(unavailResponse);
+
+        //                AnsiConsole.MarkupLine($"Sent {SIPResponseStatusCodesEnum.ServiceUnavailable} to {sipRequest.URI}");
+        //            }
+
+        //            else
+        //            {
+        //                // STUN
+        //                //string host = Ext.ParseHost(sipRequest.URI.ToString());
+        //                //_sipTransport.ContactHost = host;
+
+        //                var ua = new SIPUserAgent(_sipTransport, null);
+
+        //                ua.OnCallHungup += OnHangup;
+
+        //                ua.ServerCallCancelled += (_) =>
+        //                {
+        //                    Console.WriteLine("Incoming call cancelled by remote party.");
+        //                    EndCall(ua.Dialogue);
+
+        //                    IsCallCancelled = true;
+        //                };
+
+        //                ua.ServerCallRingTimeout += (uas) =>
+        //                {
+        //                    Console.WriteLine($"Incoming call timed out in {uas.ClientTransaction.TransactionState} state waiting for client ACK, terminating.");
+        //                    EndCall(ua.Dialogue);
+        //                    ua.Hangup();
+
+        //                    IsCallCancelled = true;
+        //                };
+
+        //                if (!IsCallCancelled)
+        //                {
+        //                    var uas = ua.AcceptCall(sipRequest);
+
+        //                    RtpSession = CreateRtpSession(ua, sipRequest.URI.User);
+        //                    //var rtpSession = CreateRtpSessionTestSound(ua, sipRequest.URI.User);
+
+        //                    var ringingResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ringing, null);
+        //                    await _sipTransport.SendResponseAsync(ringingResponse);
+        //                    //Ext.WriteLog("180 Ringing sent\n", ConsoleColor.Blue);
+
+        //                    await ua.Answer(uas, RtpSession);
+
+        //                    if (ua.IsCallActive)
+        //                    {
+        //                        await RtpSession.Start();
+        //                        Ext.WriteLog("RTP session started", ConsoleColor.Green);
+
+        //                        _calls.TryAdd(ua.Dialogue.CallId, ua);
+        //                    }
+
+        //                    //Ext.WriteLog("Press SPACE to end the call", ConsoleColor.Red);
+
+        //                    //bool exitKey = false;
+        //                    //Task task = Task.Run(() =>
+        //                    //{
+        //                    //    while (Console.ReadKey().Key != ConsoleKey.Spacebar)
+        //                    //    {
+        //                    //        exitKey = true;
+
+        //                    //        if (exitKey == false)
+        //                    //            break;
+        //                    //    }
+        //                    //});
+
+        //                    //while (!exitKey)
+        //                    //{
+        //                    //    await Task.Delay(100);
+        //                    //}
+
+        //                    while (ua.IsCallActive)
+        //                    {
+        //                        await Task.Delay(100);
+        //                    }
+
+        //                    EndCall(ua.Dialogue);
+        //                }
+        //            }
+
+        //            IsInvite = false;
+        //        }
+        //        else if (sipRequest.Method == SIPMethodsEnum.BYE)
+        //        {
+        //            if (_calls.TryRemove(sipRequest.Header.CallId, out var ua))
+        //            {
+        //                var okResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
+        //                await _sipTransport.SendResponseAsync(okResponse);
+        //                Ext.WriteLog("Call ended\n", ConsoleColor.Blue);
+
+        //                EndCall(ua.Dialogue);
+
+        //                ua.Close();
+        //            }
+        //            else
+        //            {
+        //                // The call does not exist or is already terminated.
+        //                var notFoundResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.CallLegTransactionDoesNotExist, null);
+        //                await _sipTransport.SendResponseAsync(notFoundResponse);
+        //            }
+        //        }
+        //        else if (sipRequest.Method == SIPMethodsEnum.SUBSCRIBE)
+        //        {
+        //            var notAllowededResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.MethodNotAllowed, null);
+        //            await _sipTransport.SendResponseAsync(notAllowededResponse);
+        //        }
+        //        else if (sipRequest.Method == SIPMethodsEnum.OPTIONS || sipRequest.Method == SIPMethodsEnum.REGISTER)
+        //        {
+        //            var optionsResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
+        //            await _sipTransport.SendResponseAsync(optionsResponse);
+        //        }
+        //        else if (sipRequest.Method == SIPMethodsEnum.ACK)
+        //        {
+        //            var optionsResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
+        //            await _sipTransport.SendResponseAsync(optionsResponse);
+        //            Ext.WriteLog($"SIP Status: {sipRequest.Method}", ConsoleColor.Red);
+        //        }
+        //    }
+        //    catch (Exception reqExcp)
+        //    {
+        //        Console.WriteLine($"Exception handling {sipRequest.Method}. {reqExcp.Message}");
+        //    }
+        //}
+
+        #endregion
+
+        private void EndCall(SIPDialogue? dialogue)
+        //private void EndCall(SIPDialogue dialogue, VoIPMediaSession rtpSession = null)
         {
-            rtpSession?.Close("Call ended");
+            RtpSession?.Close("Call ended");
 
-            if (dialogue != null)
+            if (dialogue == null) return;
+            string callId = dialogue.CallId;
+
+            if (_calls.TryGetValue(callId, out var userAgent))
             {
-                string callId = dialogue.CallId;
-
-                if (_calls.TryGetValue(callId, out var userAgent))
-                {
-                    userAgent.Hangup();
-                    _calls.TryRemove(callId, out _);
-                    Console.WriteLine("Call ended with BYE request.");
-                }
-                else
-                {
-                    //Console.WriteLine("Call not found.");
-                }
+                userAgent.Hangup();
+                _calls.TryRemove(callId, out _);
+                Console.WriteLine("Call ended with BYE request.");
             }
         }
 
-        private void OnHangup(SIPDialogue dialogue)
+        private void OnHangup(SIPDialogue? dialogue)
         {
-            if (dialogue != null)
-            {
-                string callID = dialogue.CallId;
+            if (dialogue == null) return;
+            string callId = dialogue.CallId;
 
-                if (_calls.ContainsKey(callID))
-                {
-                    if (_calls.TryRemove(callID, out var ua))
-                    {
-                        ua.Close();
-                    }
-                }
+            if (!_calls.ContainsKey(callId)) return;
+
+            if (_calls.TryRemove(callId, out var ua))
+            {
+                ua.Close();
             }
         }
 
@@ -304,7 +408,11 @@ namespace SipIntercept
                 AudioSource = _audioEndPoint,
                 AudioSink = _audioEndPoint
             });
-            _audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
+
+            //_audioEndPoint.RestrictFormats(format => Codecs.Contains(format.Codec));
+
+            //var codecs = new List<AudioCodecsEnum> { AudioCodecsEnum.PCMA };
+            //_audioEndPoint.RestrictFormats(format => codecs.Contains(format.Codec));
 
             rtpAudioSession.AcceptRtpFromAny = true;
 
@@ -348,6 +456,12 @@ namespace SipIntercept
             };
 
             return rtpAudioSession;
+        }
+
+        public void StopService()
+        {
+            _sipTransport.Shutdown();
+            _stunClient?.Stop();
         }
     }
 }

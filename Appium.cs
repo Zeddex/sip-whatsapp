@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace SipIntercept
 {
-    public class AppiumApp
+    public class Appium
     {
         private AppiumOptions? _options;
         private AndroidDriver<IWebElement> _driver;
